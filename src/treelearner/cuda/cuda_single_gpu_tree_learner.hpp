@@ -16,6 +16,7 @@
 #include "cuda_data_partition.hpp"
 #include "cuda_best_split_finder.hpp"
 
+#include "cuda_gradient_discretizer.hpp"
 #include "../serial_tree_learner.h"
 
 namespace LightGBM {
@@ -70,9 +71,12 @@ class CUDASingleGPUTreeLearner: public SerialTreeLearner {
 
   #ifdef DEBUG
   void CheckSplitValid(
-    const int left_leaf, const int right_leaf,
-    const double sum_left_gradients, const double sum_right_gradients);
+    const int left_leaf, const int right_leaf);
   #endif  // DEBUG
+
+  void RenewDiscretizedTreeLeaves(CUDATree* cuda_tree);
+
+  void LaunchCalcLeafValuesGivenGradStat(CUDATree* cuda_tree, const data_size_t* num_data_in_leaf);
 
   // GPU device ID
   int gpu_device_id_;
@@ -90,12 +94,15 @@ class CUDASingleGPUTreeLearner: public SerialTreeLearner {
   std::unique_ptr<CUDAHistogramConstructor> cuda_histogram_constructor_;
   // for best split information finding, given the histograms
   std::unique_ptr<CUDABestSplitFinder> cuda_best_split_finder_;
+  // gradient discretizer for quantized training
+  std::unique_ptr<CUDAGradientDiscretizer> cuda_gradient_discretizer_;
 
   std::vector<int> leaf_best_split_feature_;
   std::vector<uint32_t> leaf_best_split_threshold_;
   std::vector<uint8_t> leaf_best_split_default_left_;
   std::vector<data_size_t> leaf_num_data_;
   std::vector<data_size_t> leaf_data_start_;
+  std::vector<double> leaf_sum_gradients_;
   std::vector<double> leaf_sum_hessians_;
   int smaller_leaf_index_;
   int larger_leaf_index_;
@@ -108,8 +115,8 @@ class CUDASingleGPUTreeLearner: public SerialTreeLearner {
   std::vector<int> categorical_bin_to_value_;
   std::vector<int> categorical_bin_offsets_;
 
-  mutable double* cuda_leaf_gradient_stat_buffer_;
-  mutable double* cuda_leaf_hessian_stat_buffer_;
+  mutable CUDAVector<double> cuda_leaf_gradient_stat_buffer_;
+  mutable CUDAVector<double> cuda_leaf_hessian_stat_buffer_;
   mutable data_size_t leaf_stat_buffer_size_;
   mutable data_size_t refit_num_data_;
   uint32_t* cuda_bitset_;
@@ -148,7 +155,7 @@ class CUDASingleGPUTreeLearner: public SerialTreeLearner {
     #pragma warning(disable : 4702)
     explicit CUDASingleGPUTreeLearner(const Config* tree_config, const bool /*boosting_on_cuda*/) : SerialTreeLearner(tree_config) {
       Log::Fatal("CUDA Tree Learner was not enabled in this build.\n"
-                 "Please recompile with CMake option -DUSE_CUDAP=1");
+                 "Please recompile with CMake option -DUSE_CUDA=1");
     }
 };
 

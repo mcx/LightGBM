@@ -17,7 +17,7 @@ For a tree model, a \code{data.table} with the following columns:
   \item{\code{Feature}: Feature names in the model.}
   \item{\code{Gain}: The total gain of this feature's splits.}
   \item{\code{Cover}: The number of observation related to this feature.}
-  \item{\code{Frequency}: The number of times a feature splited in trees.}
+  \item{\code{Frequency}: The number of times a feature split in trees.}
 }
 }
 \description{
@@ -25,6 +25,8 @@ Creates a \code{data.table} of feature importances in a model.
 }
 \examples{
 \donttest{
+\dontshow{setLGBMthreads(2L)}
+\dontshow{data.table::setDTthreads(1L)}
 data(agaricus.train, package = "lightgbm")
 train <- agaricus.train
 dtrain <- lgb.Dataset(train$data, label = train$label)
