@@ -10,11 +10,12 @@
 
 #include <LightGBM/bin.h>
 #include <LightGBM/config.h>
-#include <LightGBM/cuda/cuda_utils.h>
+#include <LightGBM/cuda/cuda_utils.hu>
 #include <LightGBM/dataset.h>
 #include <LightGBM/train_share_states.h>
 #include <LightGBM/utils/openmp_wrapper.h>
 
+#include <cstdint>
 #include <vector>
 
 #define COPY_SUBROW_BLOCK_SIZE_ROW_DATA (1024)

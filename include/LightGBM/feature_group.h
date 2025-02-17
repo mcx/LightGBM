@@ -10,6 +10,7 @@
 #include <LightGBM/meta.h>
 #include <LightGBM/utils/random.h>
 
+#include <cstdint>
 #include <cstdio>
 #include <memory>
 #include <vector>
@@ -361,7 +362,7 @@ class FeatureGroup {
   inline void FinishLoad() {
     if (is_multi_val_) {
       OMP_INIT_EX();
-#pragma omp parallel for schedule(guided)
+#pragma omp parallel for num_threads(OMP_NUM_THREADS()) schedule(guided)
       for (int i = 0; i < num_feature_; ++i) {
         OMP_LOOP_EX_BEGIN();
         multi_bin_data_[i]->FinishLoad();

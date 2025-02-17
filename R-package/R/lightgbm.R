@@ -116,7 +116,7 @@ NULL
 #'                  \item If passing a factor with more than two variables, will use objective \code{"multiclass"}
 #'                  (note that parameter \code{num_class} in this case will also be determined automatically from
 #'                  \code{label}).
-#'                  \item Otherwise, will use objective \code{"regression"}.
+#'                  \item Otherwise (or if passing \code{lgb.Dataset} as input), will use objective \code{"regression"}.
 #'                  }
 #'
 #'                  \emph{New in version 4.0.0}
@@ -139,10 +139,16 @@ NULL
 #'                    system, but be aware that getting the number of cores detected correctly requires package
 #'                    \code{RhpcBLASctl} to be installed.
 #'
-#'                    This parameter gets overriden by \code{num_threads} and its aliases under \code{params}
+#'                    This parameter gets overridden by \code{num_threads} and its aliases under \code{params}
 #'                    if passed there.
 #'
 #'                    \emph{New in version 4.0.0}
+#'
+#' @param colnames Character vector of features. Only used if \code{data} is not an \code{\link{lgb.Dataset}}.
+#' @param categorical_feature categorical features. This can either be a character vector of feature
+#'                            names or an integer vector with the indices of the features (e.g.
+#'                            \code{c(1L, 10L)} to say "the first and tenth columns").
+#'                            Only used if \code{data} is not an \code{\link{lgb.Dataset}}.
 #'
 #' @param ... Additional arguments passed to \code{\link{lgb.train}}. For example
 #'     \itemize{
@@ -152,10 +158,6 @@ NULL
 #'                    \code{binary}, \code{lambdarank}, \code{multiclass}, \code{multiclass}}
 #'        \item{\code{eval}: evaluation function, can be (a list of) character or custom eval function}
 #'        \item{\code{record}: Boolean, TRUE will record iteration message to \code{booster$record_evals}}
-#'        \item{\code{colnames}: feature names, if not null, will use this to overwrite the names in dataset}
-#'        \item{\code{categorical_feature}: categorical features. This can either be a character vector of feature
-#'                            names or an integer vector with the indices of the features (e.g. \code{c(1L, 10L)} to
-#'                            say "the first and tenth columns").}
 #'        \item{\code{reset_data}: Boolean, setting it to TRUE (not the default value) will transform the booster model
 #'                          into a predictor model which frees up memory and the original datasets}
 #'     }
@@ -176,6 +178,8 @@ lightgbm <- function(data,
                      objective = "auto",
                      init_score = NULL,
                      num_threads = NULL,
+                     colnames = NULL,
+                     categorical_feature = NULL,
                      ...) {
 
   # validate inputs early to avoid unnecessary computation
@@ -184,21 +188,21 @@ lightgbm <- function(data,
   }
 
   if (is.null(num_threads)) {
-    num_threads <- lgb.get.default.num.threads()
+    num_threads <- .get_default_num_threads()
   }
-  params <- lgb.check.wrapper_param(
+  params <- .check_wrapper_param(
     main_param_name = "num_threads"
     , params = params
     , alternative_kwarg_value = num_threads
   )
-  params <- lgb.check.wrapper_param(
+  params <- .check_wrapper_param(
     main_param_name = "verbosity"
     , params = params
     , alternative_kwarg_value = verbose
   )
 
   # Process factors as labels and auto-determine objective
-  if (!lgb.is.Dataset(data)) {
+  if (!.is_Dataset(data)) {
     data_processor <- DataProcessor$new()
     temp <- data_processor$process_label(
         label = label
@@ -211,14 +215,24 @@ lightgbm <- function(data,
     rm(temp)
   } else {
     data_processor <- NULL
+    if (objective == "auto") {
+      objective <- "regression"
+    }
   }
 
   # Set data to a temporary variable
   dtrain <- data
 
   # Check whether data is lgb.Dataset, if not then create lgb.Dataset manually
-  if (!lgb.is.Dataset(x = dtrain)) {
-    dtrain <- lgb.Dataset(data = data, label = label, weight = weights, init_score = init_score)
+  if (!.is_Dataset(x = dtrain)) {
+    dtrain <- lgb.Dataset(
+      data = data
+      , label = label
+      , weight = weights
+      , init_score = init_score
+      , categorical_feature = categorical_feature
+      , colnames = colnames
+    )
   }
 
   train_args <- list(
@@ -322,7 +336,7 @@ NULL
 #' @import methods
 #' @importFrom Matrix Matrix
 #' @importFrom R6 R6Class
-#' @useDynLib lib_lightgbm , .registration = TRUE
+#' @useDynLib lightgbm , .registration = TRUE
 NULL
 
 # Suppress false positive warnings from R CMD CHECK about

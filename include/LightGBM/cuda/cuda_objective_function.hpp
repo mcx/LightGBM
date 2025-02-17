@@ -9,7 +9,7 @@
 
 #ifdef USE_CUDA
 
-#include <LightGBM/cuda/cuda_utils.h>
+#include <LightGBM/cuda/cuda_utils.hu>
 #include <LightGBM/objective_function.h>
 #include <LightGBM/meta.h>
 
@@ -45,6 +45,11 @@ class CUDAObjectiveInterface: public HOST_OBJECTIVE {
   bool IsCUDAObjective() const override { return true; }
 
   void GetGradients(const double* scores, score_t* gradients, score_t* hessians) const override {
+    LaunchGetGradientsKernel(scores, gradients, hessians);
+    SynchronizeCUDADevice(__FILE__, __LINE__);
+  }
+
+  void GetGradients(const double* scores, const data_size_t /*num_sampled_queries*/, const data_size_t* /*sampled_query_indices*/, score_t* gradients, score_t* hessians) const override {
     LaunchGetGradientsKernel(scores, gradients, hessians);
     SynchronizeCUDADevice(__FILE__, __LINE__);
   }

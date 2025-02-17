@@ -6,7 +6,7 @@
 #ifndef LIGHTGBM_SAMPLE_STRATEGY_H_
 #define LIGHTGBM_SAMPLE_STRATEGY_H_
 
-#include <LightGBM/cuda/cuda_utils.h>
+#include <LightGBM/cuda/cuda_utils.hu>
 #include <LightGBM/utils/random.h>
 #include <LightGBM/utils/common.h>
 #include <LightGBM/utils/threading.h>
@@ -54,6 +54,10 @@ class SampleStrategy {
   virtual bool IsHessianChange() const = 0;
 
   bool NeedResizeGradients() const { return need_resize_gradients_; }
+
+  virtual data_size_t num_sampled_queries() const { return 0; }
+
+  virtual const data_size_t* sampled_query_indices() const { return nullptr; }
 
  protected:
   const Config* config_;

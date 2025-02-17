@@ -228,7 +228,7 @@ void DataParallelTreeLearner<TREELEARNER_T>::FindBestSplits(const Tree* tree) {
   if (local_data_on_smaller_leaf <= 0) {
     // clear histogram buffer before synchronizing
     // otherwise histogram contents from the previous iteration will be sent
-    #pragma omp parallel for schedule(static)
+    #pragma omp parallel for num_threads(OMP_NUM_THREADS()) schedule(static)
     for (int feature_index = 0; feature_index < this->num_features_; ++feature_index) {
       if (this->col_sampler_.is_feature_used_bytree()[feature_index] == false)
         continue;
@@ -249,7 +249,7 @@ void DataParallelTreeLearner<TREELEARNER_T>::FindBestSplits(const Tree* tree) {
   // construct local histograms
   global_timer.Start("DataParallelTreeLearner::ReduceHistogram");
   global_timer.Start("DataParallelTreeLearner::ReduceHistogram::Copy");
-  #pragma omp parallel for schedule(static)
+  #pragma omp parallel for num_threads(OMP_NUM_THREADS()) schedule(static)
   for (int feature_index = 0; feature_index < this->num_features_; ++feature_index) {
     if (this->col_sampler_.is_feature_used_bytree()[feature_index] == false)
       continue;
@@ -260,12 +260,12 @@ void DataParallelTreeLearner<TREELEARNER_T>::FindBestSplits(const Tree* tree) {
       if (smaller_leaf_num_bits <= 16) {
         std::memcpy(input_buffer_.data() + buffer_write_start_pos_int16_[feature_index],
                     this->smaller_leaf_histogram_array_[feature_index].RawDataInt16(),
-                    this->smaller_leaf_histogram_array_[feature_index].SizeOfInt16Histgram());
+                    this->smaller_leaf_histogram_array_[feature_index].SizeOfInt16Histogram());
       } else {
         if (local_smaller_leaf_num_bits == 32) {
           std::memcpy(input_buffer_.data() + buffer_write_start_pos_[feature_index],
                       this->smaller_leaf_histogram_array_[feature_index].RawDataInt32(),
-                      this->smaller_leaf_histogram_array_[feature_index].SizeOfInt32Histgram());
+                      this->smaller_leaf_histogram_array_[feature_index].SizeOfInt32Histogram());
         } else {
           this->smaller_leaf_histogram_array_[feature_index].CopyFromInt16ToInt32(
             input_buffer_.data() + buffer_write_start_pos_[feature_index]);
@@ -274,7 +274,7 @@ void DataParallelTreeLearner<TREELEARNER_T>::FindBestSplits(const Tree* tree) {
     } else {
       std::memcpy(input_buffer_.data() + buffer_write_start_pos_[feature_index],
                 this->smaller_leaf_histogram_array_[feature_index].RawData(),
-                this->smaller_leaf_histogram_array_[feature_index].SizeOfHistgram());
+                this->smaller_leaf_histogram_array_[feature_index].SizeOfHistogram());
     }
   }
   global_timer.Stop("DataParallelTreeLearner::ReduceHistogram::Copy");
@@ -318,7 +318,7 @@ void DataParallelTreeLearner<TREELEARNER_T>::FindBestSplitsFromHistograms(const 
     if (parent_num_bits > 16 && larger_leaf_num_bits <= 16) {
       CHECK_LE(smaller_leaf_num_bits, 16);
       OMP_INIT_EX();
-      #pragma omp parallel for schedule(static)
+      #pragma omp parallel for num_threads(OMP_NUM_THREADS()) schedule(static)
       for (int feature_index = 0; feature_index < this->num_features_; ++feature_index) {
         OMP_LOOP_EX_BEGIN();
         if (!is_feature_aggregated_[feature_index]) continue;
@@ -330,7 +330,7 @@ void DataParallelTreeLearner<TREELEARNER_T>::FindBestSplitsFromHistograms(const 
   }
 
   OMP_INIT_EX();
-  #pragma omp parallel for schedule(static)
+  #pragma omp parallel for num_threads(OMP_NUM_THREADS()) schedule(static)
   for (int feature_index = 0; feature_index < this->num_features_; ++feature_index) {
     OMP_LOOP_EX_BEGIN();
     if (!is_feature_aggregated_[feature_index]) continue;
